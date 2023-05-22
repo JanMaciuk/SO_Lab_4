@@ -1,13 +1,16 @@
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 
 public class LRU {
-    public int physicalMemorySize;
+    protected int physicalMemorySize;
     public ArrayList<Integer> requests;
-    private int currentRequestIndex = -1; // indeks aktualnie przetwarzanego requestu, inicjalizowany z -1, bo zwiększany przed użyciem.
+    protected int currentRequestIndex = -1; // indeks aktualnie przetwarzanego requestu, inicjalizowany z -1, bo zwiększany przed użyciem.
     private final ArrayList<Integer> physicalMemory = new ArrayList<>();
-    public int errors = 0;
-    public double range;
+    protected int errors = 0;
+    protected double range;
+    protected LinkedHashSet<Integer> workingSet = new LinkedHashSet<>();
+    protected int WSS = 0;
     public LRU(int physicalMemorySize, ArrayList<Integer> requests) {
         this.physicalMemorySize = physicalMemorySize;
         this.requests = requests;
@@ -18,6 +21,8 @@ public class LRU {
         physicalMemory.clear();
         currentRequestIndex = -1;
         errors = 0;
+        workingSet.clear();
+        WSS = 0;
     }
 
 
@@ -44,7 +49,7 @@ public class LRU {
                 }
                 errors++;
             }
-
+        workingSet.add(requests.get(currentRequestIndex)); // do modelu strefowego, WSS
     }
 
 }
