@@ -6,7 +6,8 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
     static int liczbaRequestow = 10000; // na proces
     static int rozmiarPamieciWirtualnej = 500; // Maksymalna na proces
     static int rozmiarPamieciFizycznej = 100; // Łączna pamięć, dla wszystkich procesów
-    static int iloscProcesow = 5;
+    static int iloscProcesow = 10;
+    private static int zatrzymania = 0;
     private static LRU maxWSSProcess;
     private static LRU minPausedProcess;
     static ArrayList<LRU> simList = new ArrayList<>();
@@ -14,13 +15,15 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
 
         generateProcesses(); // TODO, rozdzielić na osobne pliki.
 
-        System.out.println(runEqual());
+        System.out.println("Przydział równy: "+runEqual());
         simList.forEach(LRU::reset); // Resetuje wszystkie statystyki symulacji przed kolejnym uruchomieniem
-        System.out.println(runProportional());
+        System.out.println("Proporcjonalny:  "+runProportional());
         simList.forEach(LRU::reset); // Resetuje wszystkie statystyki symulacji przed kolejnym uruchomieniem
-        System.out.println(runZoning(40)); // TODO: naprawić maą ilość błędów przy wysokim t
+        System.out.println("Model strefowy:  "+runZoning(40)); // TODO: naprawić małą ilość błędów przy wysokim t
+        System.out.println("ilość zatrzymań procesów: " + zatrzymania);
         simList.forEach(LRU::reset); // Resetuje wszystkie statystyki symulacji przed kolejnym uruchomieniem
-        System.out.println(runErrorFrequency(40,0.8,0.4));
+        System.out.println("Sterowanie PFF:  "+runErrorFrequency(40,0.9,0.1));
+        System.out.println("ilość zatrzymań procesów: " + zatrzymania);
 
 
     }
@@ -103,6 +106,7 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
 
     public static int runZoning(int t) {
         ArrayList<LRU> doneProcesses = new ArrayList<>();
+        zatrzymania = 0;
         final int[] errors = new int[1]; // lambda wymaga stałych, więc używam stałej tablicy ze zmiennym elementem ;)
         int c = t/2;
         int totalFramesUsed = 0;
@@ -133,6 +137,7 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
             while (freeFrames() < 0) {
                 // Jeżeli nie ma wystarczająco pamięci fizycznej wstrzymuję procesy o największym WSS
                 maxWSSProcess.WSS = 0;
+                zatrzymania++;
                 //System.out.println("Wstrzymuję proces");
             }
 
@@ -232,6 +237,7 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
         ArrayList<LRU> doneProcesses = new ArrayList<>();
         int errors = 0;
         int totalFramesUsed = 0;
+        zatrzymania = 0;
         int remainingFrames = rozmiarPamieciFizycznej;
 
         //  Przydziel ramki procesom proporcjonalnie
@@ -276,7 +282,7 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
                 if (sim.WSS != 0 && sim.WSS < remainingFrames) {
                     sim.setMemorySize(sim.WSS+1); // WSS używam do przechowywania ilości ramek, które proces potrzebuje, bądź informacji że jest aktywny.
                     sim.WSS = 0; // Wznawiam proces
-                    System.out.println("Wznawiam proces");
+                    //System.out.println("Wznawiam proces");
                 }
             }
 
@@ -314,7 +320,8 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
                     // Jeżeli nie ma ramek wolnych wstrzymuję proces, zapisuję ile miał ramek jako WSS i zwalniam jego ramki.
                     remainingFrames += sim.WSS = sim.physicalMemorySize;
                     sim.setMemorySize(0);
-                    System.out.println("Wstrzymuję proces");
+                    //System.out.println("Wstrzymuję proces");
+                    zatrzymania++;
                 }
             }
 
