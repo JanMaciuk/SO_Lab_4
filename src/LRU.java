@@ -25,6 +25,22 @@ public class LRU {
         WSS = 0;
     }
 
+    public void setMemorySize(int newSize) {
+        if (newSize == 0) { // Mała optymalizacja, bo często zeruję.
+            physicalMemory.clear();
+            return;
+        }
+
+        if (newSize >= physicalMemorySize) { physicalMemorySize = newSize; }
+        // Jeżeli zwiększam rozmiar, to nic nie muszę robić.
+        // Zmniejszając rozmiar, usuwam najstarszy element w pamięci fizycznej.
+        else {
+            while (physicalMemory.size() > newSize) {
+                physicalMemory.remove(0);
+            }
+        }
+    }
+
 
     public void doLRU() {
 

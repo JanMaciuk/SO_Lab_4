@@ -12,14 +12,15 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
     static ArrayList<LRU> simList = new ArrayList<>();
     public static void main(String[] args) {
 
-        generateProcesses();
+        generateProcesses(); // TODO, rozdzielić na osobne pliki.
 
         System.out.println(runEqual());
         simList.forEach(LRU::reset); // Resetuje wszystkie statystyki symulacji przed kolejnym uruchomieniem
         System.out.println(runProportional());
         simList.forEach(LRU::reset); // Resetuje wszystkie statystyki symulacji przed kolejnym uruchomieniem
-        System.out.println(runZoning(30)); //TODO: przydział ramek proporcjonalny.
+        System.out.println(runZoning(40)); // TODO: naprawić maą ilość błędów przy wysokim t
         simList.forEach(LRU::reset); // Resetuje wszystkie statystyki symulacji przed kolejnym uruchomieniem
+        System.out.println(runErrorFrequency(40,0.8,0.4));
 
 
     }
@@ -104,6 +105,8 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
         ArrayList<LRU> doneProcesses = new ArrayList<>();
         final int[] errors = new int[1]; // lambda wymaga stałych, więc używam stałej tablicy ze zmiennym elementem ;)
         int c = t/2;
+        int totalFramesUsed = 0;
+        ArrayList<LRU> simListCopy = new ArrayList<>(simList);
         // Początkowo ramki są rozdzielone równo pomiędzy procesami, nie mogę obliczyć WSS procesu zanim ten zacznie się wykonywać.
         // Pierwsze t iteracji: dodaje requesty do HashSet WorkingSet. (HashSet bo nie interesują mnie powtórki), rozmiar HashSet to WSS
         // pętla: (jeżeli lista procesów .isEmpty(), break)
@@ -121,6 +124,7 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
             for (LRU sim : simList) {
                 sim.doLRU(); // Buduję WorkingSet wykonując początkowe t requestów
                 sim.WSS = sim.workingSet.size();
+                if (i == 0) { totalFramesUsed += sim.range; } // Zliczam łączną ilość ramek do przydziału proporcjonalnego
             }
         }
 
@@ -129,7 +133,7 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
             while (freeFrames() < 0) {
                 // Jeżeli nie ma wystarczająco pamięci fizycznej wstrzymuję procesy o największym WSS
                 maxWSSProcess.WSS = 0;
-                System.out.println("Wstrzymuję proces");
+                //System.out.println("Wstrzymuję proces");
             }
 
             // Niemożliwa jest sytacja, gdzie wznowiłbym dopiero co wstrzymany proces, nie mam na niego miejsca.
@@ -137,24 +141,31 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
             while(minPausedProcess != null && minPausedProcess.workingSet.size() <= freeFrames()) {
                 // jeżeli jest jakiś wstrzymany proces, sprawdzam czy mamy na niego miejsce, jeśli tak to go wznawiam.
                 if (minPausedProcess == null) continue;
-                System.out.println("Wznawiam proces");
+                //System.out.println("Wznawiam proces");
                 minPausedProcess.WSS = minPausedProcess.workingSet.size();
             }
 
-
+            //Przydział proporcjonalny pozostałych ramek:
             while (freeFrames() > 0) {
-                // Przydzielam pozostałe ramki pomiędzy aktywne procesy, żeby nie marnować zasobów
                 for (LRU sim : simList) {
                     if (sim.WSS != 0 && freeFrames() > 0) {
-                        sim.WSS++;
+                        double percentage = (sim.range/totalFramesUsed*100);
+                        sim.WSS += Math.max((int) (freeFrames()/100.0*percentage),1);
                     }
-                    //TODO: przydział ramek proporcjonalny.
+                }
+                //Przydział ewentualnych pozostałych ramek
+                for (int i = 0; i < simList.size() && freeFrames() > 0; i++) {
+                    if (simList.get(i).WSS != 0) { simList.get(i).WSS++; }
                 }
             }
+
+
+
+
             for (LRU sim : simList) {
                 if (sim.WSS == 0) continue; // Jeżeli proces jest wstrzymany, ignoruję go.
                 // Przydzielam procesom tyle ramek, ile wynosi ich WSS (WSS=0 oznacza proces wstrzymany)
-                sim.physicalMemorySize = sim.WSS;
+                sim.setMemorySize(sim.WSS);
                 // Następnie usuwam z HashSet c najstarszych elementów (czyszczę WorkingSet z poprzednich requestów)
                 Iterator<Integer> iter = sim.workingSet.iterator();
                 for (int j = 0; j < c; j++) {
@@ -188,6 +199,7 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
 
         }
         doneProcesses.forEach(LRU -> errors[0] += LRU.errors);
+        simList = simListCopy; // Przywracam oryginalną listę procesów
         return errors[0];
     }
     public static int totalWSS() {
@@ -214,6 +226,108 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
     }
     public static int freeFrames() {
         return rozmiarPamieciFizycznej - totalWSS();
+    }
+
+    public static int runErrorFrequency(int t, double maxPPF, double minPPF) {
+        ArrayList<LRU> doneProcesses = new ArrayList<>();
+        int errors = 0;
+        int totalFramesUsed = 0;
+        int remainingFrames = rozmiarPamieciFizycznej;
+
+        //  Przydziel ramki procesom proporcjonalnie
+        //  Pętla: (jeżeli lista procesów .isEmpty(), break)
+        //  Dla procesów o WSS!=0, sprawdzam czy mam więcej wolnego miejsca niż ich WSS, jeżeli tak to przydzielam im WSS+1 ramek.
+        //  Wykonuję aktywne procesy t razy, w sim.errors będą błędy z ostatnich t wykonań, bo zerowałem
+        //  Usuwam procesy które skończyły się wykonywać.
+        //  Obliczam PPF dla każdego procesu. Jeżeli PPF mniejszy od minPPF, to zabieram ramkę, jest ona wolna.
+        //  Jeżeli jakiś proces ma PPF większy od maxPPF, to dodaję mu ramkę.
+        //  Jeżeli nie ma ramek wolnych wstrzymuję proces, zapisuję ile miał ramek jako WSS. (Procesy aktywne mają WSS=0)
+        //  Dodaję ilość błędów każdego procesu do sumy, i zeruję ilość błędów procesu.
+        //  goto Pętla
+
+        //Początkowy przydział proporcjonalny:
+
+        for (LRU sim : simList) {
+            totalFramesUsed += sim.range;
+        }
+
+        for (LRU sim : simList) {
+            double percentage = (sim.range/totalFramesUsed*100);
+            int assignedFrames = Math.max((int) (rozmiarPamieciFizycznej/100*percentage),1);
+            sim.physicalMemorySize = assignedFrames;
+            remainingFrames -= assignedFrames;
+        }
+        // Przydzielam ewentualne pozostałe ramki
+        while (remainingFrames > 0) {
+            for (LRU sim : simList) {
+                if (remainingFrames == 0) break;
+                sim.physicalMemorySize++;
+                remainingFrames--;
+
+            }
+        }
+        // Koniec przydziału proporcjonalnego
+
+        while(!simList.isEmpty()) {
+
+            for (LRU sim: simList) {
+                // Jako WSS zapisuję ile ramek potrzebował wstrzymany proces.
+                // Dla procesów o WSS!=0, sprawdzam czy mam więcej wolnego miejsca niż ich WSS, jeżeli tak to przydzielam im WSS+1 ramek.
+                if (sim.WSS != 0 && sim.WSS < remainingFrames) {
+                    sim.setMemorySize(sim.WSS+1); // WSS używam do przechowywania ilości ramek, które proces potrzebuje, bądź informacji że jest aktywny.
+                    sim.WSS = 0; // Wznawiam proces
+                    System.out.println("Wznawiam proces");
+                }
+            }
+
+            for (LRU sim: simList) {
+                //t razy wykonuję requesty, sprawdzając czy current request nie jest na końcu zakresu.
+                if (sim.WSS != 0) continue; // Jeżeli proces jest wstrzymany, nie wykonuję jego requestów
+                for (int j = 0; j < t; j++) {
+                    sim.doLRU();
+                    if (sim.currentRequestIndex >= liczbaRequestow-1) {
+                        // Jeżeli jakiś proces skończył wykonywać wszystkie swoje requesty, oznaczam go jako wykonany.
+                        doneProcesses.add(sim);
+                        break;
+                    }
+                }
+            }
+            doneProcesses.forEach(simList::remove); // Usuwam wykonane procesy z głównej listy.
+
+            for(LRU sim: simList) {
+                // Obliczam PPF dla każdego procesu. Jeżeli PPF mniejszy od minPPF, to zabieram ramkę, jest ona wolna.
+                double PPF = (double) sim.errors / t;
+                if (PPF < minPPF) {
+                    sim.setMemorySize(sim.physicalMemorySize - 1);
+                    remainingFrames++;
+                }
+            }
+
+            for(LRU sim: simList) {
+                // Jeżeli jakiś proces ma PPF większy od maxPPF, to dodaję mu ramkę.
+                double PPF = (double) sim.errors / t;
+                if (PPF > maxPPF && remainingFrames > 0) {
+                    sim.setMemorySize(sim.physicalMemorySize + 1);
+                    remainingFrames--;
+                }
+                else if (PPF > maxPPF) {
+                    // Jeżeli nie ma ramek wolnych wstrzymuję proces, zapisuję ile miał ramek jako WSS i zwalniam jego ramki.
+                    remainingFrames += sim.WSS = sim.physicalMemorySize;
+                    sim.setMemorySize(0);
+                    System.out.println("Wstrzymuję proces");
+                }
+            }
+
+            for (LRU sim: simList) {
+                // Dodaję ilość błędów każdego procesu do sumy, i zeruję ilość błędów procesu.
+                errors += sim.errors;
+                sim.errors = 0;
+            }
+
+        }
+
+
+        return errors;
     }
 
 
