@@ -12,7 +12,7 @@ public class RequestGenerator {
         int i = 1;
         while (requestsNumber > 0) {
 
-            if (ThreadLocalRandom.current().nextInt(1, 11) <i) { // Prawdopodobieństwo zmiany zakresu
+            if (ThreadLocalRandom.current().nextInt(1, 12) <i) { // Prawdopodobieństwo zmiany zakresu
                 minRange = ThreadLocalRandom.current().nextInt(minIndex, (maxIndex+minIndex)/2);
                 maxRange = ThreadLocalRandom.current().nextInt(minRange+2, Math.max(maxIndex, minRange+10));
                 i = 1;

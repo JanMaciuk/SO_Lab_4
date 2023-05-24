@@ -18,11 +18,16 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
         System.out.println("Przydział równy: "+runEqual());
         simList.forEach(LRU::reset); // Resetuje wszystkie statystyki symulacji przed kolejnym uruchomieniem
         System.out.println("Proporcjonalny:  "+runProportional());
-        simList.forEach(LRU::reset); // Resetuje wszystkie statystyki symulacji przed kolejnym uruchomieniem
-        System.out.println("Model strefowy:  "+runZoning(40)); // TODO: naprawić małą ilość błędów przy wysokim t
+        simList.forEach(LRU::reset);
+        System.out.println("Model strefowy:  "+runZoning(20));
+        /*
+        Zwiększanie parametru t dla modelu strefowego doprowadzi do wyliczania większych WSS dla każdego procesu:
+        (Więcej zmian zakresów lokalności - wykorzystanie większej ilości różnych ramek).
+        Przez co więcej procesów będzie zatrzymanych, co zmniejszy ilość błędów, ale zwiększy czas wykonania.
+         */
         System.out.println("ilość zatrzymań procesów: " + zatrzymania);
-        simList.forEach(LRU::reset); // Resetuje wszystkie statystyki symulacji przed kolejnym uruchomieniem
-        System.out.println("Sterowanie PFF:  "+runErrorFrequency(40,0.9,0.1));
+        simList.forEach(LRU::reset);
+        System.out.println("Sterowanie PFF:  "+runErrorFrequency(50,0.9,0.1));
         System.out.println("ilość zatrzymań procesów: " + zatrzymania);
 
 
