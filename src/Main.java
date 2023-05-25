@@ -121,7 +121,7 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
         // pętla: (jeżeli lista procesów .isEmpty(), break)
         // Jeżeli mam miejsce wznawiam proces.
         // While (suma WSS-ów > rozmiar pamięci fizycznej) Ustawiam WSS procesu o największym WSS na 0 (wstrzymuje)
-        // Następnie zwiększam WSS niewstrzymanych po kolei o 1, aż wykorzystam wszystkie ramki.
+        // Następnie proporcjonalnie zwiększam WSS pozostałych procesów tak aby wykorzystywały wszystkie dostępne ramki.
         // Przydzielam procesom tyle ramek, ile wynosi ich WSS (WSS=0 oznacza proces wstrzymany)
         // Usuwam z HashSet c najstarszych elementów (czyszczę WorkingSet z poprzednich requestów)
         // c razy wykonuję requesty, sprawdzając czy current request nie jest na końcu zakresu.
