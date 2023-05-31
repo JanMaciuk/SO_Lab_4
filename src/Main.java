@@ -13,7 +13,7 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
     static ArrayList<LRU> simList = new ArrayList<>();
     public static void main(String[] args) {
 
-        generateProcesses(); // TODO, rozdzielić na osobne pliki.
+        generateProcesses();
 
         System.out.println("Przydział równy: "+runEqual());
         simList.forEach(LRU::reset); // Resetuje wszystkie statystyki symulacji przed kolejnym uruchomieniem
@@ -27,7 +27,7 @@ public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_l
          */
         System.out.println("ilość zatrzymań procesów: " + zatrzymania);
         simList.forEach(LRU::reset);
-        System.out.println("Sterowanie PFF:  "+runErrorFrequency(50,0.9,0.1));
+        System.out.println("Sterowanie PFF:  "+runErrorFrequency(50,0.9,0.2));
         System.out.println("ilość zatrzymań procesów: " + zatrzymania);
 
 
