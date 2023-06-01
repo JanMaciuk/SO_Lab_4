@@ -2,7 +2,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class Main {  //wyniki: https://docs.google.com/spreadsheets/d/1QiDLjMX_lORQf7Wva6eKuCVYIUOWK37q4Ch1MktIQm0
+public class Main {
     static int liczbaRequestow = 10000; // na proces
     static int rozmiarPamieciWirtualnej = 500; // Maksymalna na proces
     static int rozmiarPamieciFizycznej = 100; // Łączna pamięć, dla wszystkich procesów
